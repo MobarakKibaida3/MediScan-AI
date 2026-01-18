@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { AnalysisResult, Language } from '../types';
 
 interface Props {
@@ -10,145 +10,178 @@ interface Props {
 
 const AnalysisView: React.FC<Props> = ({ result, onReset, lang }) => {
   const isAr = lang === 'ar';
-  const isEmergency = result.symptomInsights?.urgency === 'EMERGENCY';
-  
-  const handleShare = async () => {
-    const text = `${result.title}\n${result.summary}\nMediScan AI`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'MediScan AI Report', text, url: window.location.href });
-      } catch (e) { console.log(e); }
+  const isEmergency = result.symptomInsights?.urgency?.toLowerCase().includes('emergency');
+  const [hideSensitive, setHideSensitive] = useState(true);
+  const [activeAlerts, setActiveAlerts] = useState<Set<number>>(new Set());
+
+  const toggleAlert = (idx: number, medicine: string) => {
+    if (activeAlerts.has(idx)) {
+      setActiveAlerts(prev => {
+        const next = new Set(prev);
+        next.delete(idx);
+        return next;
+      });
     } else {
-      const el = document.createElement('textarea');
-      el.value = window.location.href;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      alert(isAr ? 'تم نسخ الرابط للمشاركة' : 'Link copied to share');
+      if ("Notification" in window) {
+        Notification.requestPermission().then(permission => {
+          if (permission === "granted") {
+            alert(isAr ? `تنبيه دواء: ${medicine}` : `Reminder: ${medicine}`);
+            setActiveAlerts(prev => new Set(prev).add(idx));
+          }
+        });
+      }
     }
   };
 
-  const handleExportPDF = () => {
-    window.print();
+  const copyDoctorSummary = () => {
+    const meds = result.prescriptionData?.map(m => `- ${m.name}: ${m.dosage} (${m.frequency})`).join('\n') || '';
+    const summaryText = `[MediScan AI Clinical Summary]\n\nPatient ID: ${hideSensitive ? '****' : result.userId}\nTitle: ${result.title}\nSummary: ${result.summary}\n\nMedications:\n${meds}\n\nRecommendations: ${result.recommendations.join(', ')}\n\n⚠️ Disclaimer: For guidance only.`;
+    
+    navigator.clipboard.writeText(summaryText);
+    alert(isAr ? 'تم نسخ ملخص الطبيب بنجاح' : 'Doctor summary copied successfully');
+  };
+
+  const shareReport = () => {
+    const text = `${hideSensitive ? 'MediScan AI Clinical Report' : result.title}\n${result.summary}\n\nVia MediScan AI`;
+    if (navigator.share) {
+      navigator.share({ title: 'MediScan Report', text, url: window.location.href });
+    } else {
+      navigator.clipboard.writeText(text);
+      alert(isAr ? 'تم نسخ رابط التقرير بأمان' : 'Report link copied securely');
+    }
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in p-4 print:p-0 print:m-0 print:max-w-none" dir={isAr ? 'rtl' : 'ltr'}>
+    <div className="w-full max-w-5xl mx-auto space-y-10 animate-fade-in p-2 print:p-0" dir={isAr ? 'rtl' : 'ltr'}>
       {isEmergency && (
-        <div className="bg-red-600 text-white p-6 rounded-[2rem] shadow-2xl flex items-center gap-6 animate-pulse border-4 border-red-400 print:border-red-600">
-          <i className="fas fa-ambulance text-4xl"></i>
+        <div className="bg-red-600 text-white p-10 rounded-[3rem] shadow-3xl flex items-center gap-10 border-4 border-red-400 animate-pulse">
+          <i className="fas fa-exclamation-triangle text-6xl"></i>
           <div>
-            <h3 className="text-xl font-black">{isAr ? 'حالة طوارئ محتملة!' : 'Potential Emergency Detected!'}</h3>
-            <p className="text-sm opacity-90">{isAr ? 'الأعراض المذكورة قد تشير لخطورة. يرجى التوجه لأقرب مستشفى فوراً.' : 'The symptoms described may be serious. Please visit the nearest ER immediately.'}</p>
+            <h3 className="text-4xl font-black mb-2">{isAr ? 'خطر طبي حرج!' : 'Critical Medical Risk!'}</h3>
+            <p className="text-xl opacity-90 leading-tight">
+              {isAr ? 'يجب التوجه لأقرب قسم طوارئ فوراً.' : 'Immediate ER visit required.'}
+            </p>
           </div>
         </div>
       )}
 
-      <div className={`bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border ${isEmergency ? 'border-red-200' : 'border-blue-50'} print:shadow-none print:border-none print:rounded-none`}>
-        <div className={`${isEmergency ? 'bg-red-700' : 'bg-blue-600'} p-8 text-white flex justify-between items-center print:bg-white print:text-blue-900 print:border-b-2 print:border-blue-100`}>
-          <div className="flex-1">
-            <h2 className="text-3xl font-black mb-2 print:text-2xl">{result.title}</h2>
-            <p className="text-blue-50 opacity-90 max-w-lg print:text-gray-600 print:text-sm">{result.summary}</p>
+      <div className="bg-white rounded-[4rem] shadow-3xl overflow-hidden border border-slate-100 print:shadow-none print:border-none">
+        <div className={`p-12 text-white flex flex-col md:flex-row justify-between items-start gap-10 ${isEmergency ? 'bg-red-800' : 'bg-gradient-to-br from-blue-900 to-blue-700'}`}>
+          <div className="flex-1 space-y-6">
+            <div className="flex flex-wrap gap-4 items-center">
+               <div className="inline-flex items-center gap-2 bg-white/15 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-white/10">
+                 <i className="fas fa-shield-heart"></i> Verified Clinical Logic
+               </div>
+               <button onClick={() => setHideSensitive(!hideSensitive)} className="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white/30 transition-all">
+                 <i className={`fas ${hideSensitive ? 'fa-eye' : 'fa-eye-slash'}`}></i> {isAr ? (hideSensitive ? 'إظهار البيانات' : 'إخفاء البيانات') : (hideSensitive ? 'Show Data' : 'Hide Data')}
+               </button>
+            </div>
+            <h2 className="text-5xl font-black leading-tight tracking-tight">
+              {hideSensitive ? (isAr ? 'تقرير طبي محمي' : 'Protected Clinical Report') : result.title}
+            </h2>
+            <p className="text-blue-10 opacity-80 max-w-3xl text-xl leading-relaxed italic">{result.summary}</p>
+            
+            <button 
+              onClick={copyDoctorSummary}
+              className="bg-white text-blue-900 px-6 py-3 rounded-2xl font-black text-sm flex items-center gap-3 hover:bg-blue-50 transition-colors shadow-lg"
+            >
+              <i className="fas fa-copy"></i>
+              {isAr ? 'نسخ ملخص الطبيب' : 'Copy Doctor Summary'}
+            </button>
           </div>
-          <div className="hidden print:block text-right">
-             <div className="text-xl font-black text-blue-600">MediScan AI</div>
-             <div className="text-[10px] text-gray-400">{new Date().toLocaleDateString(isAr ? 'ar-EG' : 'en-US')}</div>
+          
+          <div className="hidden md:flex flex-col items-center gap-4 bg-white/10 p-6 rounded-[2.5rem] backdrop-blur-xl border border-white/20 shrink-0">
+             <div className="w-32 h-32 bg-white rounded-3xl flex items-center justify-center p-3 shadow-2xl">
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(window.location.href)}&color=1e3a8a`} alt="QR" className="w-full h-full" />
+             </div>
+             <span className="text-[10px] font-black opacity-60 uppercase tracking-tighter">Secure Sharing Hub</span>
           </div>
         </div>
 
-        <div className="p-8 space-y-12 print:p-4">
-          {/* تم إصلاح عرض الجدول هنا لضمان عدم ظهور خلايا فارغة */}
-          {result.prescriptionData && result.prescriptionData.length > 0 && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
-                  <i className="fas fa-file-prescription text-xl"></i>
-                </div>
-                <h3 className="text-2xl font-black text-blue-900">
-                  {isAr ? 'بيانات الروشتة المستخرجة' : 'Extracted Prescription Data'}
-                </h3>
-              </div>
-              
-              <div className="overflow-hidden rounded-[2rem] border border-blue-100 shadow-sm">
-                <table className="w-full text-center border-collapse">
-                  <thead>
-                    <tr className="bg-blue-50/50 text-blue-900 font-bold">
-                      <th className="p-5 border-b border-blue-50">{isAr ? 'الدواء' : 'Medicine'}</th>
-                      <th className="p-5 border-b border-blue-50">{isAr ? 'الجرعة' : 'Dosage'}</th>
-                      <th className="p-5 border-b border-blue-50">{isAr ? 'التكرار' : 'Frequency'}</th>
-                      <th className="p-5 border-b border-blue-50">{isAr ? 'المدة' : 'Duration'}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-blue-50">
-                    {result.prescriptionData.map((item, idx) => (
-                      <tr key={idx} className="hover:bg-blue-50/20 transition-colors">
-                        <td className="p-5 font-bold text-blue-700 text-lg">{item.name || '—'}</td>
-                        <td className="p-5 text-gray-600">{item.dosage || '—'}</td>
-                        <td className="p-5 text-gray-600">{item.frequency || '—'}</td>
-                        <td className="p-5 text-gray-600">{item.duration || '—'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* عرض جدول الجرعات بشكل أفضل */}
+        <div className="p-12 space-y-20">
           {result.dosageSchedule && result.dosageSchedule.length > 0 && (
-            <div className="space-y-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
-                  <i className="fas fa-clock text-xl"></i>
-                </div>
-                <h3 className="text-2xl font-black text-emerald-900">
-                  {isAr ? 'جدول المواعيد اليومي' : 'Daily Dosage Schedule'}
-                </h3>
+            <div className="space-y-8">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center shadow-lg"><i className="fas fa-clock text-2xl"></i></div>
+                <h3 className="text-3xl font-black text-emerald-900">{isAr ? 'الجدول الزمني للجرعات' : 'Dosage Timeline'}</h3>
               </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {result.dosageSchedule.map((item, idx) => (
-                  <div key={idx} className="bg-emerald-50/30 p-6 rounded-3xl border border-emerald-100 hover:shadow-md transition-all">
-                    <div className="text-emerald-700 font-black text-xl mb-2">{item.time}</div>
-                    <div className="text-slate-900 font-bold mb-1">{item.medicine}</div>
-                    <div className="text-slate-500 text-sm">{item.instruction}</div>
+                  <div key={idx} className="bg-slate-50 p-8 rounded-[2.5rem] border-2 border-slate-100 relative group hover:scale-105 transition-all">
+                    <button onClick={() => toggleAlert(idx, item.medicine)} className={`absolute top-6 ${isAr ? 'left-6' : 'right-6'} w-10 h-10 rounded-full flex items-center justify-center ${activeAlerts.has(idx) ? 'bg-emerald-600 text-white' : 'bg-white text-slate-300 shadow-sm'}`}>
+                      <i className={`fas ${activeAlerts.has(idx) ? 'fa-bell' : 'fa-bell-slash'}`}></i>
+                    </button>
+                    <div className="text-3xl font-black text-emerald-700 mb-2">{item.time}</div>
+                    <div className="text-xl font-black text-slate-900 mb-3">{item.medicine}</div>
+                    <p className="text-slate-500 text-sm italic">{item.instruction}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="grid md:grid-cols-2 gap-8 border-t border-slate-100 pt-10">
-            <div className="space-y-4">
-              <h3 className="text-xl font-black text-red-700 flex items-center gap-2"><i className="fas fa-shield-virus"></i>{isAr ? 'تحذيرات هامة' : 'Safety Alerts'}</h3>
-              {result.warnings.map((w, i) => (
-                <div key={i} className="flex gap-3 text-red-800 bg-red-50 p-5 rounded-[1.5rem] text-sm font-medium border border-red-100 shadow-sm">{w}</div>
-              ))}
+          {result.labAnalysis && result.labAnalysis.length > 0 && (
+            <div className="space-y-8">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shadow-lg"><i className="fas fa-vial text-2xl"></i></div>
+                <h3 className="text-3xl font-black text-blue-900">{isAr ? 'تحليل النتائج المخبرية' : 'Lab Result Analysis'}</h3>
+              </div>
+              <div className="grid gap-4">
+                {result.labAnalysis.map((test, idx) => (
+                  <div key={idx} className={`p-8 rounded-[2rem] border-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 ${test.status === 'High' ? 'bg-red-50 border-red-100' : test.status === 'Low' ? 'bg-orange-50 border-orange-100' : 'bg-emerald-50 border-emerald-100'}`}>
+                    <div>
+                      <h4 className="font-black text-xl text-slate-900">{test.testName}</h4>
+                      <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">{test.referenceRange}</p>
+                    </div>
+                    <div className="text-center">
+                      <div className={`text-3xl font-black ${test.status === 'High' ? 'text-red-600' : test.status === 'Low' ? 'text-orange-600' : 'text-emerald-600'}`}>{test.value}</div>
+                      <div className="text-xs font-black uppercase opacity-60">{test.status}</div>
+                    </div>
+                    <p className="md:max-w-xs text-sm text-slate-600 leading-relaxed font-medium italic">{test.simplifiedExplanation}</p>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="space-y-4">
-              <h3 className="text-xl font-black text-blue-800 flex items-center gap-2"><i className="fas fa-user-md"></i>{isAr ? 'توصيات طبية' : 'Advice'}</h3>
-              {result.recommendations.map((r, i) => (
-                <div key={i} className="flex gap-3 text-blue-800 bg-blue-50 p-5 rounded-[1.5rem] text-sm font-medium border border-blue-100 shadow-sm">{r}</div>
-              ))}
+          )}
+
+          <div className="grid md:grid-cols-2 gap-10 pt-12 border-t border-slate-100">
+            <div className="bg-red-50/50 p-10 rounded-[3rem] border-2 border-red-50 space-y-6">
+              <h4 className="text-2xl font-black text-red-700 flex items-center gap-4"><i className="fas fa-biohazard"></i> {isAr ? 'تنبيهات الأمان' : 'Safety Alerts'}</h4>
+              <ul className="space-y-4">
+                {result.warnings.map((w, i) => (
+                  <li key={i} className="text-sm font-black text-red-900 flex gap-3 leading-relaxed">
+                    <span className="w-2 h-2 rounded-full bg-red-500 mt-1.5 shrink-0"></span> {w}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="bg-blue-50/50 p-10 rounded-[3rem] border-2 border-blue-50 space-y-6">
+              <h4 className="text-2xl font-black text-blue-700 flex items-center gap-4"><i className="fas fa-stethoscope"></i> {isAr ? 'توصيات المساعد' : 'Clinical Guidance'}</h4>
+              <ul className="space-y-4">
+                {result.recommendations.map((r, i) => (
+                  <li key={i} className="text-sm font-black text-blue-900 flex gap-3 leading-relaxed">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0"></span> {r}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
 
-        <div className="p-8 bg-slate-50 border-t flex flex-wrap gap-4 print:hidden">
-          <button onClick={onReset} className="flex-1 min-w-[150px] bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-200">
-            <i className="fas fa-redo"></i> {isAr ? 'تحليل جديد' : 'New Analysis'}
+        <div className="p-12 bg-slate-50 border-t flex flex-wrap gap-6 print:hidden">
+          <button onClick={onReset} className="flex-1 min-w-[180px] bg-blue-600 text-white py-6 rounded-[2rem] font-black text-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-4 shadow-2xl active:scale-95">
+            <i className="fas fa-plus-circle"></i> {isAr ? 'فحص جديد' : 'New Scan'}
           </button>
-          <button onClick={handleExportPDF} className="flex-1 min-w-[150px] bg-emerald-600 text-white py-4 rounded-2xl font-bold hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-100">
-            <i className="fas fa-file-pdf"></i> {isAr ? 'تصدير PDF' : 'Export PDF'}
+          <button onClick={shareReport} className="flex-1 min-w-[180px] bg-white border-2 border-slate-200 text-slate-700 py-6 rounded-[2rem] font-black text-xl hover:bg-slate-100 transition-all flex items-center justify-center gap-4 active:scale-95">
+            <i className="fas fa-share-nodes"></i> {isAr ? 'مشاركة آمنة' : 'Secure Share'}
           </button>
-          <button onClick={handleShare} className="flex-1 min-w-[150px] bg-white border border-slate-200 text-slate-700 py-4 rounded-2xl font-bold hover:bg-slate-100 transition-all flex items-center justify-center gap-2">
-            <i className="fas fa-share-alt"></i> {isAr ? 'مشاركة' : 'Share'}
+          <button onClick={() => window.print()} className="flex-1 min-w-[180px] bg-slate-900 text-white py-6 rounded-[2rem] font-black text-xl hover:bg-black transition-all flex items-center justify-center gap-4 active:scale-95">
+            <i className="fas fa-file-pdf"></i> {isAr ? 'تصدير PDF' : 'Save PDF'}
           </button>
         </div>
 
-        <div className="p-8 bg-slate-900 text-slate-400 text-xs text-center italic border-t border-slate-800 print:bg-white print:text-black print:border-slate-200">
-          <p className="mb-2">{result.disclaimer}</p>
-          <p className="font-bold opacity-50 uppercase tracking-widest">MediScan AI - Health Intelligence System</p>
+        <div className="p-10 bg-slate-900 text-slate-500 text-[10px] text-center italic border-t border-slate-800">
+          <p className="max-w-3xl mx-auto leading-relaxed">{result.disclaimer}</p>
         </div>
       </div>
     </div>

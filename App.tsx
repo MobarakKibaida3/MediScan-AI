@@ -4,29 +4,30 @@ import Header from './components/Header';
 import AnalysisView from './components/AnalysisView';
 import AuthModal from './components/AuthModal';
 import LegalModal from './components/LegalModal';
+import ImageQualityChecker from './components/ImageQualityChecker';
 import { analyzeHealthData } from './services/geminiService';
 import { auth, db, onAuthStateChanged, signOut, collection, query, where, getDocs, orderBy, addDoc } from './services/firebase';
 import { AnalysisResult, ScanType, Language, Translations, User } from './types';
 
 const translations: Record<Language, Translations> = {
   ar: {
-    heroTitle: 'افهم صحتك بذكاء، أمان، وسهولة',
-    heroSub: 'حول تقاريرك الطبية وروشتاتك إلى معلومات مفهومة. مساعدك الأول لفهم الأدوية والتحاليل والأعراض.',
-    tabPrescription: 'مسح روشتة',
-    tabMedicine: 'تحليل دواء',
-    tabSymptoms: 'فحص أعراض',
-    tabInteractions: 'تفاعل الأدوية',
-    uploadTitle: 'ارفع صورة واضحة',
-    uploadSub: 'تأكد من وضوح النص والإضاءة الجيدة',
-    uploadBtn: 'اختر الصورة',
-    symptomsPlaceholder: 'صف أعراضك بدقة...',
-    analyzeBtn: 'بدء التحليل',
-    loading: 'جاري المعالجة طبياً...',
-    featurePrivacy: 'بياناتك مشفرة ومحمية سحابياً.',
-    featureSpeed: 'تحليل فوري بذكاء Gemini 3.',
-    featureReports: 'تقارير شاملة مع جدول جرعات يومي.',
-    footerAbout: 'MediScan AI: بوابتك لفهم لغة الطب والتحاليل بسهولة.',
-    footerLegal: 'تنبيه: لأغراض إرشادية فقط. لا يغني عن الطبيب.',
+    heroTitle: 'MediScan AI: مساعدك الصحي الذكي',
+    heroSub: 'حول روشتاتك وتقاريرك إلى معلومات مفهومة مع جداول جرعات وتنبيهات أمان فورية. أمان كامل وخصوصية مطلقة.',
+    tabPrescription: 'روشتة',
+    tabMedicine: 'دواء',
+    tabSymptoms: 'أعراض',
+    tabInteractions: 'تفاعلات',
+    uploadTitle: 'ارفع صورة المستند',
+    uploadSub: 'تأكد من الوضوح والإضاءة لنتائج دقيقة طبياً',
+    uploadBtn: 'اختر صورة',
+    symptomsPlaceholder: 'صف الأعراض (للكبار أو الأطفال)...',
+    analyzeBtn: 'بدء الفحص بالذكاء الاصطناعي',
+    loading: 'جاري القراءة والتحليل طبياً...',
+    featurePrivacy: 'وضع الخصوصية: لا يتم حفظ الصور نهائياً.',
+    featureSpeed: 'معالجة فورية عبر Gemini 3 Flash.',
+    featureReports: 'تقارير PDF و QR Code للمشاركة الآمنة.',
+    footerAbout: 'MediScan AI: نبسط الطب لنحمي الأرواح.',
+    footerLegal: 'إرشاد طبي فقط. استشر طبيبك دائماً.',
     footerRights: 'جميع الحقوق محفوظة.',
     newAnalysis: 'جديد',
     print: 'طباعة',
@@ -40,28 +41,28 @@ const translations: Record<Language, Translations> = {
     googleLogin: 'دخول جوجل',
     noAccount: 'ليس لديك حساب؟',
     hasAccount: 'لديك حساب؟',
-    authRequired: 'يرجى الدخول لحفظ بياناتك.',
-    exportPdf: 'تصدير',
+    authRequired: 'سجل لحفظ تاريخك الصحي سحابياً.',
+    exportPdf: 'تصدير PDF',
     preview: 'معاينة'
   },
   en: {
-    heroTitle: 'Understand Health Smarter & Safer',
-    heroSub: 'Convert medical reports and prescriptions into clear insights. Your guide to meds, labs, and symptoms.',
+    heroTitle: 'MediScan AI: Smart Health Hub',
+    heroSub: 'Convert prescriptions into clear insights with dosage schedules and instant safety alerts. Total privacy.',
     tabPrescription: 'Prescription',
-    tabMedicine: 'Medicine Info',
+    tabMedicine: 'Medicine',
     tabSymptoms: 'Symptoms',
     tabInteractions: 'Interactions',
-    uploadTitle: 'Upload Clear Photo',
-    uploadSub: 'Ensure text is readable and well-lit',
+    uploadTitle: 'Upload Document',
+    uploadSub: 'Ensure clarity and lighting for medical precision',
     uploadBtn: 'Pick Image',
-    symptomsPlaceholder: 'Describe your symptoms...',
-    analyzeBtn: 'Start Analysis',
+    symptomsPlaceholder: 'Describe symptoms (Adult or Child)...',
+    analyzeBtn: 'Start AI Scan',
     loading: 'Processing medical data...',
-    featurePrivacy: 'Data is encrypted and stored securely.',
-    featureSpeed: 'Instant analysis with Gemini 3.',
-    featureReports: 'Comprehensive reports with schedules.',
-    footerAbout: 'MediScan AI: Simplifying medical language for everyone.',
-    footerLegal: 'Disclaimer: Guidance only. No substitute for a doctor.',
+    featurePrivacy: 'Privacy Mode: No images are stored.',
+    featureSpeed: 'Instant processing via Gemini 3 Flash.',
+    featureReports: 'PDF & QR Reports for safe sharing.',
+    footerAbout: 'MediScan AI: Simplifying medicine to save lives.',
+    footerLegal: 'Guidance only. Always consult a doctor.',
     footerRights: 'All rights reserved.',
     newAnalysis: 'New',
     print: 'Print',
@@ -75,8 +76,8 @@ const translations: Record<Language, Translations> = {
     googleLogin: 'Google Sign-in',
     noAccount: 'No account?',
     hasAccount: 'Have account?',
-    authRequired: 'Please login to save data.',
-    exportPdf: 'Export',
+    authRequired: 'Register to sync history to cloud.',
+    exportPdf: 'Export PDF',
     preview: 'Preview'
   }
 };
@@ -91,23 +92,32 @@ const App: React.FC = () => {
   const [base64Data, setBase64Data] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [legalModal, setLegalModal] = useState({ isOpen: false, type: 'disclaimer' as any });
+  const [darkMode, setDarkMode] = useState(false);
+  const [symptomsText, setSymptomsText] = useState('');
+  const [privacyMode, setPrivacyMode] = useState(true);
+  const [userConsent, setUserConsent] = useState(false);
+  const [legalModal, setLegalModal] = useState<{isOpen: boolean, type: 'privacy' | 'terms' | 'disclaimer'}>({
+    isOpen: false,
+    type: 'privacy'
+  });
 
-  // 1. مراقبة حالة تسجيل الدخول عبر Firebase
+  const isAr = lang === 'ar';
+  const t = translations[lang];
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       if (firebaseUser) {
-        const u: User = {
+        setUser({
           id: firebaseUser.uid,
           email: firebaseUser.email || '',
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
           avatar: firebaseUser.photoURL || `https://ui-avatars.com/api/?name=${firebaseUser.email}&background=0D8ABC&color=fff`
-        };
-        setUser(u);
-        fetchUserHistory(u.id);
+        });
+        fetchUserHistory(firebaseUser.uid);
       } else {
         setUser(null);
-        setUserHistory([]);
+        const local = localStorage.getItem('mediscan_guest_history');
+        setUserHistory(local ? JSON.parse(local) : []);
       }
     });
     return () => unsubscribe();
@@ -115,192 +125,169 @@ const App: React.FC = () => {
 
   const fetchUserHistory = async (userId: string) => {
     try {
-      const q = query(
-        collection(db, "analyses"), 
-        where("userId", "==", userId),
-        orderBy("timestamp", "desc")
-      );
+      const q = query(collection(db, "analyses"), where("userId", "==", userId), orderBy("timestamp", "desc"));
       const querySnapshot = await getDocs(q);
       const history: AnalysisResult[] = [];
-      querySnapshot.forEach((doc) => {
-        history.push({ id: doc.id, ...doc.data() } as AnalysisResult);
-      });
+      querySnapshot.forEach((doc) => { history.push({ id: doc.id, ...doc.data() } as AnalysisResult); });
       setUserHistory(history);
-    } catch (e) {
-      console.error("Error fetching history:", e);
+    } catch (e) { console.error(e); }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setPreviewUrl(ev.target?.result as string);
+        setBase64Data((ev.target?.result as string).split(',')[1]);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    setResult(null);
-  };
-
-  const runAnalysis = async () => {
-    if (!user) {
-      setIsAuthModalOpen(true);
+  const handleStartAnalysis = async () => {
+    if (!userConsent) {
+      alert(isAr ? 'يرجى الموافقة على بروتوكول الخصوصية أولاً.' : 'Please agree to privacy protocol first.');
       return;
     }
-    
     setLoading(true);
     try {
-      let analysisData: any;
-      if (activeTab === 'symptoms') analysisData = { text: 'General analysis' };
-      else {
-        if (!base64Data) throw new Error("No image");
-        analysisData = base64Data;
+      const context = `Privacy: ${privacyMode}, Language: ${lang}`;
+      let payload = base64Data || symptomsText;
+      const res = await analyzeHealthData(activeTab, payload, !!base64Data, lang, context);
+      const finalResult = { ...res, userId: user?.id || 'guest', timestamp: Date.now() };
+
+      if (user && !privacyMode) {
+        const docRef = await addDoc(collection(db, "analyses"), finalResult);
+        setResult({ ...finalResult, id: docRef.id });
+      } else {
+        setResult({ ...finalResult, id: 'guest-' + Date.now() });
       }
-
-      const res = await analyzeHealthData(activeTab, analysisData, !!base64Data, lang);
-      
-      const finalResultData = {
-        ...res,
-        userId: user.id,
-        timestamp: Date.now()
-      };
-
-      // حفظ في Firestore
-      const docRef = await addDoc(collection(db, "analyses"), finalResultData);
-      const finalResult = { ...finalResultData, id: docRef.id } as AnalysisResult;
-
-      setResult(finalResult);
-      setUserHistory(prev => [finalResult, ...prev]);
-      
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); } finally { setLoading(false); }
   };
 
-  const t = translations[lang];
-
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header 
-        lang={lang} 
-        setLang={setLang} 
-        user={user} 
-        onLogout={handleLogout} 
-        onOpenAuth={() => setIsAuthModalOpen(true)} 
-        t={t} 
-      />
+    <div className={`min-h-screen transition-colors duration-500 flex flex-col font-['Tajawal'] ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+      <Header lang={lang} setLang={setLang} user={user} onLogout={async () => { await signOut(auth); setResult(null); }} onOpenAuth={() => setIsAuthModalOpen(true)} t={t} />
       
-      <main className="flex-grow py-8 px-4">
+      <main className="flex-grow py-8 px-4 container mx-auto">
         {!result ? (
-          <div className="max-w-6xl mx-auto space-y-12">
-            <section className="text-center py-10">
-              <h1 className="text-5xl font-black text-blue-900 mb-4 tracking-tight">{t.heroTitle}</h1>
-              <p className="text-gray-500 max-w-2xl mx-auto leading-relaxed">{t.heroSub}</p>
+          <div className="max-w-5xl mx-auto space-y-12 animate-fade-in">
+            <section className="text-center py-10 space-y-8">
+               <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-full font-black text-[10px] uppercase tracking-widest border border-blue-100 mb-2 shadow-sm">
+                  <i className="fas fa-sparkles"></i> AI-Powered Clinical Intelligence
+               </div>
+               <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none">
+                  {isAr ? ' MediScan AI' : 'MediScan AI'}
+               </h1>
+              <p className={`text-xl max-w-2xl mx-auto leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>{t.heroSub}</p>
+              
+              <div className="flex flex-col items-center gap-6 pt-4">
+                <label className="flex items-center gap-4 cursor-pointer bg-white px-8 py-4 rounded-[2rem] border-2 border-slate-50 shadow-sm hover:border-blue-200 transition-all">
+                  <input 
+                    type="checkbox" 
+                    checked={userConsent} 
+                    onChange={e => setUserConsent(e.target.checked)}
+                    className="w-6 h-6 rounded-lg accent-blue-600"
+                  />
+                  <span className="text-sm font-black text-slate-600">
+                    {isAr ? 'أوافق على فحص بياناتي للأغراض الإرشادية فقط' : 'I agree to scan my data for informational purposes only'}
+                  </span>
+                </label>
+              </div>
             </section>
 
-            <div className="flex flex-wrap justify-center gap-2 mb-8">
-              {(['prescription', 'medicine', 'labs', 'symptoms', 'interactions', 'firstaid'] as const).map(tab => (
+            <div className="flex flex-wrap justify-center gap-3">
+              {(['prescription', 'labs', 'medicine', 'symptoms', 'firstaid'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => { setActiveTab(tab); setPreviewUrl(null); setBase64Data(null); }}
-                  className={`px-6 py-3 rounded-2xl font-bold transition-all border-2 flex items-center gap-2 ${activeTab === tab ? 'bg-blue-600 text-white border-blue-600 shadow-lg scale-105' : 'bg-white text-blue-600 border-blue-50 hover:bg-blue-50'}`}
+                  className={`px-6 py-4 rounded-[2rem] font-black transition-all flex items-center gap-3 border-2 ${activeTab === tab ? 'bg-blue-600 text-white border-blue-600 shadow-xl scale-105' : (darkMode ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-white border-slate-100 text-slate-500 hover:bg-slate-50')}`}
                 >
-                  <i className={`fas ${tab === 'prescription' ? 'fa-file-medical' : tab === 'medicine' ? 'fa-pills' : tab === 'labs' ? 'fa-microscope' : tab === 'symptoms' ? 'fa-stethoscope' : tab === 'interactions' ? 'fa-vial' : 'fa-kit-medical'}`}></i>
-                  {tab === 'labs' ? (lang === 'ar' ? 'قارئ التحاليل' : 'Labs Reader') : 
-                   tab === 'firstaid' ? (lang === 'ar' ? 'إسعافات أولية' : 'First Aid') : 
-                   t[`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}` as keyof Translations]}
+                  <i className={`fas ${tab === 'prescription' ? 'fa-receipt' : tab === 'medicine' ? 'fa-pills' : tab === 'labs' ? 'fa-vial' : tab === 'symptoms' ? 'fa-heart-pulse' : 'fa-kit-medical'}`}></i>
+                  {tab === 'labs' ? (isAr ? 'تحاليل' : 'Labs') : t[`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}` as keyof Translations]}
                 </button>
               ))}
             </div>
 
-            <div className="bg-white rounded-[3rem] shadow-2xl p-8 md:p-12 border border-blue-50 relative overflow-hidden">
-               <div className="text-center space-y-6">
+            <div className={`rounded-[3.5rem] shadow-3xl p-10 border transition-colors ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-100'}`}>
+               <div className="text-center">
                    {loading ? (
-                     <div className="p-20 flex flex-col items-center justify-center gap-4">
-                       <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                       <div className="text-blue-600 font-bold text-xl animate-pulse">{t.loading}</div>
+                     <div className="py-20 flex flex-col items-center gap-8">
+                       <div className="w-20 h-20 border-8 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+                       <div className="text-blue-600 font-black text-2xl animate-pulse">{t.loading}</div>
                      </div>
                    ) : (
-                     <>
-                      <div 
-                        onClick={() => document.getElementById('file-in')?.click()}
-                        className="border-4 border-dashed border-blue-100 rounded-[2.5rem] p-16 cursor-pointer hover:bg-blue-50/50 transition-all group relative overflow-hidden"
-                      >
-                        {previewUrl ? (
-                          <div className="relative inline-block">
-                            <img src={previewUrl} className="max-h-64 mx-auto rounded-3xl shadow-2xl border-8 border-white" />
-                          </div>
-                        ) : (
-                          <div className="space-y-6">
-                            <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mx-auto text-blue-600 group-hover:scale-110 transition-transform">
-                              <i className="fas fa-camera-retro text-4xl"></i>
+                     <div className="space-y-8">
+                      {activeTab === 'symptoms' ? (
+                        <textarea value={symptomsText} onChange={(e) => setSymptomsText(e.target.value)} placeholder={t.symptomsPlaceholder} className={`w-full h-56 p-8 rounded-[2.5rem] border-2 outline-none text-xl transition-all ${darkMode ? 'bg-slate-950 border-slate-800 focus:border-blue-500' : 'bg-slate-50 border-slate-100 focus:border-blue-500 focus:bg-white'}`} />
+                      ) : (
+                        <div onClick={() => document.getElementById('file-in')?.click()} className={`border-4 border-dashed rounded-[3rem] p-16 cursor-pointer transition-all hover:bg-blue-50/10 ${darkMode ? 'border-slate-800' : 'border-slate-100'}`}>
+                          {previewUrl ? (
+                            <img src={previewUrl} className="max-h-80 mx-auto rounded-3xl shadow-2xl border-4 border-white" />
+                          ) : (
+                            <div className="space-y-6">
+                              <div className="w-24 h-24 bg-blue-50 text-blue-600 rounded-[2rem] flex items-center justify-center mx-auto shadow-sm">
+                                <i className="fas fa-camera-rotate text-4xl"></i>
+                              </div>
+                              <h3 className="text-3xl font-black text-slate-800">{t.uploadTitle}</h3>
+                              <p className="text-slate-400 max-w-xs mx-auto text-lg">{t.uploadSub}</p>
                             </div>
-                            <div>
-                              <h3 className="text-2xl font-black text-blue-900">{t.uploadTitle}</h3>
-                              <p className="text-gray-400 mt-2 max-w-xs mx-auto">{t.uploadSub}</p>
-                            </div>
-                          </div>
-                        )}
-                        <input id="file-in" type="file" className="hidden" accept="image/*" onChange={e => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                              setPreviewUrl(reader.result as string);
-                              setBase64Data((reader.result as string).split(',')[1]);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }} />
-                      </div>
-                      <div className="pt-6">
-                        <button 
-                          onClick={runAnalysis} 
-                          className="w-full max-w-sm py-5 rounded-2xl font-black text-xl shadow-xl bg-blue-600 text-white hover:bg-blue-700 mx-auto flex items-center justify-center gap-3"
-                        >
-                          <i className="fas fa-brain"></i>
-                          {t.analyzeBtn}
-                        </button>
-                      </div>
-                     </>
+                          )}
+                          <input id="file-in" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                        </div>
+                      )}
+                      
+                      <button onClick={handleStartAnalysis} className="w-full max-w-xl py-6 rounded-[2rem] font-black text-2xl shadow-2xl bg-blue-600 text-white hover:bg-blue-700 transition-all flex items-center justify-center gap-4 mx-auto active:scale-95">
+                        <i className="fas fa-wand-sparkles"></i>
+                        {t.analyzeBtn}
+                      </button>
+                     </div>
                    )}
                 </div>
             </div>
-
-            {user && userHistory.length > 0 && !loading && (
-              <section className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-px bg-slate-200 flex-grow"></div>
-                  <h3 className="font-black text-slate-400 text-xs uppercase tracking-[0.2em]">{lang === 'ar' ? 'سجلك الصحي السحابي' : 'Cloud Health History'}</h3>
-                  <div className="h-px bg-slate-200 flex-grow"></div>
-                </div>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {userHistory.map((h) => (
-                    <div key={h.id} onClick={() => setResult(h)} className="bg-white p-5 rounded-3xl border border-slate-100 flex items-center gap-4 cursor-pointer hover:shadow-lg hover:border-blue-100 transition-all group">
-                      <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                        <i className="fas fa-file-prescription"></i>
-                      </div>
-                      <div className="overflow-hidden">
-                        <h4 className="font-bold text-sm text-slate-800 truncate">{h.title}</h4>
-                        <p className="text-[10px] text-slate-400 mt-1">
-                          {new Date(h.timestamp).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
           </div>
         ) : (
           <AnalysisView result={result} onReset={() => setResult(null)} lang={lang} />
         )}
       </main>
 
-      <footer className="bg-slate-900 text-slate-400 py-16 px-4">
-        <div className="container mx-auto text-center space-y-4">
-          <p className="text-[11px] opacity-50">{t.footerLegal}</p>
-          <div className="flex justify-center gap-4 text-xs font-bold">
-             <button onClick={() => setLegalModal({isOpen: true, type: 'privacy'})} className="hover:text-white transition-colors">Privacy</button>
-             <button onClick={() => setLegalModal({isOpen: true, type: 'terms'})} className="hover:text-white transition-colors">Terms</button>
-          </div>
-          <p className="text-center text-[10px] opacity-30">© {new Date().getFullYear()} MediScan AI. Connected to Firebase.</p>
+      <footer className={`py-16 px-6 mt-auto border-t ${darkMode ? 'bg-slate-950 border-slate-800' : 'bg-white border-slate-50'}`}>
+        <div className="container mx-auto max-w-4xl text-center space-y-10">
+           
+           {/* --- Professional Logo in Footer --- */}
+           <div className="flex flex-col items-center gap-4">
+              <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl shadow-lg rotate-3"></div>
+                <i className="fas fa-heart-pulse text-white text-2xl relative z-10"></i>
+                <div className="absolute -bottom-1.5 -right-1.5 w-6 h-6 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center shadow-md">
+                  <i className="fas fa-search text-[8px] text-white"></i>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-4xl font-black tracking-tighter leading-none">
+                    <span className="text-blue-600">Medi</span><span className="text-emerald-500">Scan</span>
+                  </h2>
+                  <span className="px-2.5 py-0.5 bg-slate-100 text-slate-400 text-[10px] font-black uppercase rounded-full border border-slate-200 tracking-tight">
+                    Free
+                  </span>
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mt-2">
+                  Your Health, Our Help — <span className="text-blue-600/70 font-black">100% Free Service</span>
+                </p>
+              </div>
+           </div>
+
+           <div className="flex justify-center gap-10 text-xs font-black uppercase text-slate-400">
+              <button onClick={() => setLegalModal({isOpen: true, type: 'privacy'})} className="hover:text-blue-500 transition-colors">Privacy</button>
+              <button onClick={() => setLegalModal({isOpen: true, type: 'terms'})} className="hover:text-blue-500 transition-colors">Terms</button>
+              <button onClick={() => setLegalModal({isOpen: true, type: 'disclaimer'})} className="hover:text-blue-500 transition-colors">Disclaimer</button>
+           </div>
+
+           <p className="text-[10px] opacity-40 leading-relaxed italic max-w-lg mx-auto text-slate-400">{t.footerLegal}</p>
+           <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest">© 2024 MediScan AI - All Rights Reserved</p>
         </div>
       </footer>
 

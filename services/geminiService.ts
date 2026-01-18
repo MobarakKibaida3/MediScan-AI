@@ -2,31 +2,42 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, ScanType, Language } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 export const analyzeHealthData = async (
   type: ScanType,
   data: string | any, 
   isImage: boolean,
-  lang: Language
+  lang: Language,
+  context?: string
 ): Promise<AnalysisResult> => {
   const model = 'gemini-3-flash-preview';
   
   const systemInstruction = `
-    You are an expert OCR and medical information simplified assistant.
-    Your goal is to extract text and simplify it for a layperson.
+    You are MediScan AI, a world-class clinical intelligence system.
+    Goal: High-precision OCR for medical documents and safety-first analysis.
     
-    CRITICAL RULES:
-    1. STRICTLY DETECT EMERGENCIES: If keywords like "chest pain", "unconscious", "stroke", "bleeding" appear, set urgency to "EMERGENCY".
-    2. LAB READER: If type is "labs", extract values, reference ranges, and simplify what the test means. Use "status" (Normal/High/Low).
-    3. DOSAGE SCHEDULE: If type is "prescription", generate a suggested "dosageSchedule" (e.g., Breakfast: 8:00 AM - Drug Name).
-    4. NO DIAGNOSIS: Never say "You have X". Say "Results like these are often seen in X".
-    5. Always conclude with a disclaimer.
+    PATIENT CONTEXT: ${context || 'General'}
+    
+    CORE PROTOCOLS:
+    1. OCR: Extract drug names, strengths (e.g. 500mg), and precise dosage instructions.
+    2. INTERACTION CHECK: If multiple drugs are detected, check for harmful interactions.
+    3. DUPLICATION CHECK: Alert if two drugs have the same active ingredient.
+    4. EMERGENCY FILTER: If symptoms/labs indicate a life-threatening state, set symptomInsights.urgency to "EMERGENCY".
+    5. GENERICS: List common alternative brand names for the same active ingredient.
+    
+    RESPONSE RULES:
+    - Never give a final diagnosis. Always use cautious language.
+    - If OCR is unclear, add a warning about potential misreading.
+    - OUTPUT MUST BE IN ${lang === 'ar' ? 'Arabic' : 'English'}.
   `;
 
-  const prompt = isImage 
-    ? `Analyze this ${type} image. Perform OCR. If it's a lab result, explain values. If it's a prescription, create a daily schedule.`
-    : `Analyze symptoms: ${JSON.stringify(data)}. Check for emergencies first.`;
+  let prompt = "";
+  if (isImage) {
+    prompt = `Analyze this ${type} document image. Perform precision OCR. Highlight dosages, generic names, and any safety warnings.`;
+  } else {
+    prompt = `Patient query for ${type}: ${JSON.stringify(data)}. Focus on immediate safety steps and clinical clarity.`;
+  }
 
   const response = await ai.models.generateContent({
     model,
@@ -49,8 +60,7 @@ export const analyzeHealthData = async (
                 name: { type: Type.STRING },
                 dosage: { type: Type.STRING },
                 frequency: { type: Type.STRING },
-                duration: { type: Type.STRING },
-                notes: { type: Type.STRING }
+                duration: { type: Type.STRING }
               }
             }
           },
@@ -83,35 +93,24 @@ export const analyzeHealthData = async (
             properties: {
               brandName: { type: Type.STRING },
               activeIngredient: { type: Type.STRING },
-              uses: { type: Type.ARRAY, items: { type: Type.STRING } },
-              warnings: { type: Type.ARRAY, items: { type: Type.STRING } },
               alternatives: { type: Type.ARRAY, items: { type: Type.STRING } }
             }
           },
           symptomInsights: {
             type: Type.OBJECT,
             properties: {
-              possibilities: { type: Type.ARRAY, items: { type: Type.STRING } },
-              advice: { type: Type.ARRAY, items: { type: Type.STRING } },
-              urgency: { type: Type.STRING }
-            }
-          },
-          details: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: { category: { type: Type.STRING }, items: { type: Type.ARRAY, items: { type: Type.STRING } } },
-              required: ["category", "items"]
+              urgency: { type: Type.STRING },
+              advice: { type: Type.ARRAY, items: { type: Type.STRING } }
             }
           },
           warnings: { type: Type.ARRAY, items: { type: Type.STRING } },
           recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
           disclaimer: { type: Type.STRING }
         },
-        required: ["title", "summary", "details", "warnings", "recommendations", "disclaimer"]
+        required: ["title", "summary", "warnings", "recommendations", "disclaimer"]
       }
     }
   });
 
-  return JSON.parse(response.text);
+  return JSON.parse(response.text || "{}");
 };

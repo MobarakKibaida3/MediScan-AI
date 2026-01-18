@@ -56,7 +56,7 @@ export interface AnalysisResult {
   disclaimer: string;
 }
 
-export type ScanType = 'prescription' | 'medicine' | 'symptoms' | 'interactions' | 'labs' | 'firstaid';
+export type ScanType = 'prescription' | 'medicine' | 'symptoms' | 'interactions' | 'labs' | 'firstaid' | 'calculator';
 export type Language = 'ar' | 'en';
 
 export interface Translations {

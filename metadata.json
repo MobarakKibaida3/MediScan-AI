@@ -2,6 +2,8 @@
   "name": "MediScan AI",
   "description": "An intelligent health assistant that analyzes prescriptions, medicine labels, and symptoms to provide organized guidance and safety warnings.",
   "requestFramePermissions": [
-    "camera"
+    "camera",
+    "microphone",
+    "geolocation"
   ]
 }
